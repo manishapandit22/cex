@@ -1,0 +1,200 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum OrderSide {
+  BUY
+  SELL
+}
+
+enum OrderType {
+  LIMIT
+  MARKET
+}
+
+enum OrderStatus {
+  NEW
+  OPEN
+  PARTIALLY_FILLED
+  FILLED
+  CANCELLED
+  REJECTED
+}
+
+enum MarketStatus {
+  ACTIVE
+  HALTED
+  DELISTED
+}
+
+enum LedgerReason {
+  DEPOSIT
+  WITHDRAWAL
+  TRADE
+  FEE
+  LOCK
+  UNLOCK
+  ADJUSTMENT
+}
+
+enum WithdrawStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+model User {
+  id String @id @default(uuid())
+  email String @unique
+  passwordHash String
+  kycLevel Int @default(1)
+  role Role @default(USER)
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  balances Balance[]
+  orders Order[]
+  tokens RefreshToken[]
+  deposits Deposit[]
+  withdrawals Withdrawal[]
+}
+
+model Asset {
+  id String @id @default(uuid())
+  symbol String @unique
+  name String
+  decimals Int @default(8)
+  isActive Boolean @default(true)
+  balances Balance[]
+}
+
+model Market {
+  id String @id @default(uuid())
+  symbol String @unique
+  baseAsset String
+  quoteAsset String
+  tickSize BigInt
+  lotSize BigInt
+  minNotional BigInt
+  makerFeeBps Int @default(8)
+  takerFeeBps Int @default(10)
+  status MarketStatus @default(ACTIVE)
+}
+
+model Balance {
+  id String @id @default(uuid())
+  userId String
+  assetId String
+  available BigInt @default(0)
+  locked BigInt @default(0)
+  lastEngineSeq BigInt @default(0)
+  user User @relation(fields: [userId], references: [id])
+  asset Asset @relation(fields: [assetId], references: [id])
+  @@unique([userId, assetId])
+}
+
+model Order {
+  id String @id
+  clientOrderId String?
+  userId String
+  market String
+  side OrderSide
+  type OrderType
+  price BigInt?
+  quantity BigInt
+  quoteQuantity BigInt?
+  filledQuantity BigInt @default(0)
+  status OrderStatus @default(NEW)
+  postOnly Boolean @default(false)
+  ioc Boolean @default(false)
+  rejectReason String?
+  engineSeq BigInt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id])
+  @@unique([userId, clientOrderId])
+  @@index([userId, market, status])
+  @@index([userId, createdAt])
+}
+
+model Trade {
+  id String @default(uuid())
+  createdAt DateTime @default(now())
+  engineSeq BigInt
+  market String
+  price BigInt
+  quantity BigInt
+  makerOrderId String
+  takerOrderId String
+  makerUserId String
+  takerUserId String
+  takerSide OrderSide
+  makerFee BigInt
+  takerFee BigInt
+  @@id([id, createdAt])
+  @@unique([engineSeq, createdAt])
+  @@index([market, createdAt])
+  @@index([makerUserId, createdAt])
+  @@index([takerUserId, createdAt])
+}
+
+model LedgerEntry {
+  id String @id @default(uuid())
+  userId String
+  asset String
+  delta BigInt
+  reason LedgerReason
+  refId String?
+  engineSeq BigInt
+  createdAt DateTime @default(now())
+  @@unique([engineSeq, userId, asset, reason])
+}
+
+model Deposit {
+  id String @id @default(uuid())
+  userId String
+  asset String
+  amount BigInt
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Withdrawal {
+  id String @id @default(uuid())
+  userId String
+  asset String
+  amount BigInt
+  status WithdrawStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  decidedAt DateTime?
+  user User @relation(fields: [userId], references: [id])
+}
+
+model RefreshToken {
+  id String @id @default(uuid())
+  userId String
+  familyId String
+  tokenHash String @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  user User @relation(fields: [userId], references: [id])
+}
+
+model AuditLog {
+  id String @id @default(uuid())
+  actorId String?
+  action String
+  meta Json
+  createdAt DateTime @default(now())
+}

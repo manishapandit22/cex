@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Kairos CEX &mdash; Two-Developer Workstream Plan</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.css" rel="stylesheet" type="text/css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <h1 id="kairos-cex--two-developer-workstream-plan">Kairos CEX — Two-Developer Workstream Plan</h1>
+<blockquote>
+<p>Companion to <a href="cex.html">cex.md</a> (the spec) and <a href="agent.html">agent.md</a>. This file does not change the architecture.
+It decides <strong>who owns which part</strong>, <strong>what the contracts between the two parts are</strong>, and <strong>in what order the work runs in parallel</strong>.
+If this file conflicts with <code>cex.md</code>, <code>cex.md</code> wins. Fix this file in the same PR.</p>
+</blockquote>
+<ul>
+<li><strong>Dev A — Core &amp; Realtime:</strong> everything on the <em>engine side</em> of the Redis streams.</li>
+<li><strong>Dev B — Platform, API &amp; Web:</strong> everything on the <em>client side</em> of the Redis streams, plus the shared tooling.</li>
+</ul>
+<hr>
+<h2 id="1-project-architecture-overview">1. Project Architecture Overview</h2>
+<h3 id="11-what-exists-today-verified-2026-11-04">1.1 What exists today (verified 2026-11-04)</h3>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>State</th>
+<th>Problem</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Backend/documentation/cex.md</code>, <code>agent.md</code></td>
+<td>Full spec, Phases 0–20</td>
+<td>Uncommitted planning comment added after §8.2 (lines 1005–1009). Remove it before committing.</td>
+</tr>
+<tr>
+<td><code>Backend/docker-compose.dev.yml</code>, <code>.env.example</code>, <code>.gitignore</code>, <code>README.md</code></td>
+<td>Phase 0 files, matching spec</td>
+<td>They live in <code>Backend/</code>, but the spec puts the monorepo root (<code>apps/</code>, <code>packages/</code>) at the repo root.</td>
+</tr>
+<tr>
+<td><code>Backend/package.json</code></td>
+<td>Output of <code>npm init</code> with <code>express</code>, <code>cors</code>, <code>psql</code></td>
+<td>Conflicts with <strong>D2</strong> (Fastify) and <strong>D12</strong> (Prisma). The npm package <code>psql@0.0.1</code> is not a Postgres client. Replace it in Phase 1.</td>
+</tr>
+<tr>
+<td><code>Frontend/Designs/Kairos.html</code></td>
+<td>Bundled mockup with 7 screens: Markets, Sign in, Sign up, Trade terminal, Wallet, Orders, Admin</td>
+<td>Matches the §8.1 screen map, so it serves as the UI reference. The uncommitted diff only re-escapes <code>&lt;</code> as <code>&lt;</code> and changes no content.</td>
+</tr>
+<tr>
+<td><code>debug.log</code> (root, tracked)</td>
+<td>Chrome crashpad noise</td>
+<td>Delete it and add <code>*.log</code> to a root <code>.gitignore</code>.</td>
+</tr>
+<tr>
+<td>Toolchain</td>
+<td><code>agent.md</code> reports Node 24</td>
+<td>The spec requires Node 20 LTS on <strong>both</strong> machines (add an <code>.nvmrc</code>).</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Required layout decision (before any code is written):</strong> make the <strong>repo root the npm-workspaces root</strong>, as in spec Phase 1:</p>
+<pre><code>Kairos/
+├── apps/ api-gateway/ engine/ db-worker/ market-data/ ws-server/ web/
+├── packages/ types/ money/ db/ config/ logger/
+├── docs/ cex.md agent.md workstreams.md designs/Kairos.html
+├── docker-compose.dev.yml  .env.example  .gitignore  README.md  .nvmrc
+├── package.json  tsconfig.base.json  .eslintrc.cjs  .prettierrc  vitest.workspace.ts
+</code></pre>
+<p>This step follows the spec rather than changing it. <code>Backend/</code> and <code>Frontend/</code> are not part of the specified architecture, and <code>apps/web</code> would otherwise end up under a folder named <code>Backend</code>.</p>
+<h3 id="12-target-architecture-from-cexmd-3">1.2 Target architecture (from <a href="http://cex.html">cex.md</a> §3)</h3>
+<pre><code>            REST                XADD                XREADGROUP
+  web ───────────► api-gateway ─────► engine.commands ─────────► ENGINE (single process,
+   ▲                  │  ▲                                        books + live balances,
+   │                  │  └──── engine.replies ◄───────────────────  journal + snapshots)
+   │                  │ reads                                         │
+   │                  ▼                                     engine.events (stream)
+   │              Postgres ◄──── db-worker ◄────────────────────────┤
+   │                  ▲                                             │
+   │                  └──── (trades/candles) ── market-data ◄───────┤
+   │                                              │ depth:/ticker: keys, md:* pub/sub, user:* pub/sub
+   └──── WSS ◄──────────── ws-server ◄────────────┘
+</code></pre>
+<p>All writes go through one path (gateway → engine). Everything after the engine reads its event stream. <strong>Redis Streams form the natural seam</strong>: on each side, the code knows about the other side only through message shapes.</p>
+<h3 id="13-module-dependencies-code-level-imports">1.3 Module dependencies (code-level imports)</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Imports</th>
+<th>Talks to at runtime</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@cex/types</code></td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>@cex/money</code></td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>@cex/config</code>, <code>@cex/logger</code></td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>@cex/db</code> (Prisma)</td>
+<td>types</td>
+<td>Postgres</td>
+</tr>
+<tr>
+<td><code>apps/engine</code></td>
+<td>types, money, config, logger</td>
+<td>Redis streams, local disk. <strong>Never</strong> Postgres or HTTP (it reads Postgres once for the initial seed)</td>
+</tr>
+<tr>
+<td><code>apps/db-worker</code></td>
+<td>types, money, db, config, logger</td>
+<td><code>engine.events</code> → Postgres</td>
+</tr>
+<tr>
+<td><code>apps/market-data</code></td>
+<td>types, money, db, config, logger</td>
+<td><code>engine.events</code> → Redis keys and pub/sub</td>
+</tr>
+<tr>
+<td><code>apps/ws-server</code></td>
+<td>types, config, logger</td>
+<td>Redis pub/sub and keys → clients. Verifies the gateway's JWT</td>
+</tr>
+<tr>
+<td><code>apps/api-gateway</code></td>
+<td>types, money, db, config, logger</td>
+<td>Postgres, Redis (commands, replies, cache, rate limits)</td>
+</tr>
+<tr>
+<td><code>apps/web</code></td>
+<td>types, money</td>
+<td>gateway REST, ws-server WS</td>
+</tr>
+</tbody>
+</table>
+<h3 id="14-tight-coupling-and-bottlenecks">1.4 Tight coupling and bottlenecks</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Coupling point</th>
+<th>Why it's risky</th>
+<th>Resolution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C1</td>
+<td><strong>Command / Event / Reply shapes</strong> (<code>@cex/types</code>)</td>
+<td>Every service depends on them. Spec §5.1 types <code>payload</code> and <code>data</code> loosely, so each side would guess differently.</td>
+<td>Freeze them in the <strong>Contract Sprint</strong> (§5.3), fully typed and with zod schemas.</td>
+</tr>
+<tr>
+<td>C2</td>
+<td><strong>Prisma schema</strong></td>
+<td>The gateway writes users, tokens, deposits, withdrawals, audit rows and markets. db-worker writes orders, trades, balances and ledger. Both read all of it.</td>
+<td>Single owner (B). Schema is verbatim from §4.5. Changes go through a <code>contract/</code> PR.</td>
+</tr>
+<tr>
+<td>C3</td>
+<td><strong><code>@cex/money</code></strong></td>
+<td>Used by the engine, gateway and web. A bug here breaks money everywhere.</td>
+<td>Single owner (A). The API signatures are fixed by spec Phase 3 from day 1.</td>
+</tr>
+<tr>
+<td>C4</td>
+<td><strong>Redis key, stream and channel names</strong> (§4.7)</td>
+<td>Strings scattered across six apps drift easily.</td>
+<td>One constants file in <code>@cex/types</code>.</td>
+</tr>
+<tr>
+<td>C5</td>
+<td><strong>Depth seq protocol</strong></td>
+<td>market-data writes it, ws-server serves it, web consumes it. A seq bug breaks the order book UI.</td>
+<td>market-data and ws-server have the same owner (A). Web (B) codes against §6.2 and the fixtures.</td>
+</tr>
+<tr>
+<td>C6</td>
+<td><strong>JWT claims</strong></td>
+<td>The gateway issues tokens and ws-server verifies them.</td>
+<td>Contract <code>{ sub, role, iat, exp }</code>, HS256, <code>JWT_ACCESS_SECRET</code>.</td>
+</tr>
+<tr>
+<td>C7</td>
+<td><strong>Root tooling</strong> (<code>package.json</code>, <code>package-lock.json</code>, tsconfig, eslint)</td>
+<td>The lockfile is the most common merge-conflict source.</td>
+<td>Single owner (B) plus the lockfile rule in §5.2.</td>
+</tr>
+<tr>
+<td><strong>B1</strong></td>
+<td><strong>Engine critical path</strong> (Phases 5 → 6 → 7 → 8 → 10)</td>
+<td>Strictly sequential, the hardest part, and no end-to-end flow works without it.</td>
+<td>B develops against a <strong>fake engine</strong> speaking the same stream contract (§4.2).</td>
+</tr>
+<tr>
+<td><strong>B2</strong></td>
+<td><strong>Phase 8 covers both sides</strong> (runner + <code>EngineClient</code>)</td>
+<td>Without a split, both developers edit the same phase.</td>
+<td>Split it: runner = A, <code>EngineClient</code> = B. The reply stream is the contract between them.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="15-spec-gaps-to-close-in-the-contract-sprint-theyd-cause-integration-bugs-otherwise">1.5 Spec gaps to close in the Contract Sprint (they'd cause integration bugs otherwise)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Gap</th>
+<th>Recommended decision</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G1</td>
+<td><code>Trade</code> is unique on <code>(engineSeq, createdAt)</code> and <code>LedgerEntry</code> on <code>(engineSeq, userId, asset, reason)</code>. One command that sweeps 3 makers emits 3 trades with the <strong>same</strong> command seq and timestamp, which causes unique violations.</td>
+<td><code>engineSeq</code> is <strong>per event</strong> (the glossary already says &quot;every processed command/event&quot;). <code>process()</code> gets <code>ctx.engineSeq</code> as the first seq and numbers its events consecutively (still pure). Each event also carries <code>commandSeq</code> for grouping.</td>
+</tr>
+<tr>
+<td>G2</td>
+<td>§Phase 7 says one <code>BALANCE_UPDATED</code> per touched (user, asset) &quot;with the delta reason&quot;, but one trade both credits (<code>TRADE</code>) and charges (<code>FEE</code>).</td>
+<td><code>BALANCE_UPDATED.data.entries: { delta, reason, refId }[]</code>. db-worker writes one <code>LedgerEntry</code> per entry.</td>
+</tr>
+<tr>
+<td>G3</td>
+<td><code>WITHDRAW_COMPLETE/REJECT</code> need user, asset and amount. Invariant 12 counts pending withdrawals, but <code>EngineState</code> (§4.6) has no place to track them.</td>
+<td>Add <code>pendingWithdrawals: Map&lt;withdrawalId, {userId, asset, amount}&gt;</code> to engine state (A-internal). Payload is <code>{ withdrawalId }</code>.</td>
+</tr>
+<tr>
+<td>G4</td>
+<td><code>/admin/fees</code> reads &quot;fee account balances&quot;, but the fee account only exists in engine memory.</td>
+<td>Seed a system user (fixed UUID, <code>role ADMIN</code>, <code>isActive false</code>). The engine emits <code>BALANCE_UPDATED</code> for it, so the normal projection makes fees queryable.</td>
+</tr>
+<tr>
+<td>G5</td>
+<td><code>DELETE /order/:id</code> has no market, and <code>Book.index</code> is per market.</td>
+<td>Payload is <code>{ orderId }</code> only. The engine keeps a global <code>orderId → market</code> map (A-internal). The gateway never guesses the market.</td>
+</tr>
+<tr>
+<td>G6</td>
+<td>Shape of the <code>engine.replies</code> entries is undefined.</td>
+<td>See <code>EngineReply</code> in §3.2. The gateway reads replies with plain <code>XREAD</code> (not a group), so every gateway instance sees every reply.</td>
+</tr>
+<tr>
+<td>G7</td>
+<td>db-worker must <em>insert</em> <code>Order</code> rows, but nobody else writes them.</td>
+<td>Every <code>ORDER_*</code> event carries a <strong>full order snapshot</strong> (all non-null <code>Order</code> columns).</td>
+</tr>
+<tr>
+<td>G8</td>
+<td><code>Order.quantity</code> is non-null, but a market BUY only has <code>quoteQuantity</code>.</td>
+<td>The engine reports <code>quantity = filledQuantity</code> on terminal events of a market BUY. The first event carries <code>&quot;0&quot;</code>.</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="2-work-distribution">2. Work Distribution</h2>
+<h3 id="dev-a--core--realtime-engine-side-of-the-stream">Dev A — Core &amp; Realtime (engine side of the stream)</h3>
+<p><strong>Rationale:</strong> the engine, its event consumers and the realtime fan-out all depend on engine event <em>semantics</em>: seq ordering, depth deltas and idempotency. Keeping them with one person means the hardest-to-specify coupling (C5, depth reconstruction, replay determinism) never crosses a person boundary.</p>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Spec phases</th>
+<th>Directories</th>
+<th>Deliverables</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@cex/money</code></td>
+<td>3</td>
+<td><code>packages/money/</code></td>
+<td>All functions in Phase 3, <code>serialize</code>/<code>deserialize</code>, <code>zScaledString()</code>, coverage ≥ 95%</td>
+</tr>
+<tr>
+<td>Order book</td>
+<td>5</td>
+<td><code>apps/engine/src/book/</code></td>
+<td><code>DoublyLinkedList</code>, <code>SortedPriceLevels</code>, <code>Book</code> with snapshot/restore, property tests</td>
+</tr>
+<tr>
+<td>Matching</td>
+<td>6</td>
+<td><code>apps/engine/src/engine/</code></td>
+<td>Pure <code>process(state, cmd, ctx)</code>, validation, LIMIT/MARKET/IOC/Post-Only/STP, fuzz test</td>
+</tr>
+<tr>
+<td>Balances and fees</td>
+<td>7</td>
+<td><code>apps/engine/src/balances/</code></td>
+<td><code>BalanceManager</code>, <code>settleTrade</code>, deposits/withdrawals, <code>checkInvariants</code></td>
+</tr>
+<tr>
+<td>Engine runner</td>
+<td>8 (engine half)</td>
+<td><code>apps/engine/src/runner/</code></td>
+<td><code>XREADGROUP</code> loop, seq assignment, pipelined reply + events, <code>XACK</code>, pending recovery, idempotency window, stream trimming</td>
+</tr>
+<tr>
+<td>Recovery</td>
+<td>10</td>
+<td><code>apps/engine/src/persistence/</code></td>
+<td>Journal, snapshots, replay, CRC truncation, <code>engine:verify</code>, crash test</td>
+</tr>
+<tr>
+<td>DB worker</td>
+<td>11</td>
+<td><code>apps/db-worker/</code></td>
+<td>Idempotent batch projection, dead-letter stream, <code>dbw:rebuild</code>, metrics</td>
+</tr>
+<tr>
+<td>Market data</td>
+<td>12 (steps 1–6, 8)</td>
+<td><code>apps/market-data/</code></td>
+<td>Ticker, 24 h stats, depth mirror and snapshots, 100 ms batching, in-progress candles, <code>user:{id}</code> events</td>
+</tr>
+<tr>
+<td>WebSocket server</td>
+<td>13</td>
+<td><code>apps/ws-server/</code></td>
+<td>Subscriptions, AUTH, depth resync, backpressure, heartbeat, 5k-client test, <code>docs/perf.md</code></td>
+</tr>
+<tr>
+<td>Test fixtures</td>
+<td>—</td>
+<td><code>packages/types/fixtures/</code></td>
+<td>Golden event logs (e.g. the §5.3 worked example) produced by the real engine</td>
+</tr>
+</tbody>
+</table>
+<h3 id="dev-b--platform-api--web-client-side-of-the-stream--tooling">Dev B — Platform, API &amp; Web (client side of the stream + tooling)</h3>
+<p><strong>Rationale:</strong> everything request/response-shaped and user-facing. B also owns the shared tooling and the schema because Phases 0–2 come first on the critical path and someone has to be the single gatekeeper for them.</p>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Spec phases</th>
+<th>Directories</th>
+<th>Deliverables</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Repo scaffold</td>
+<td>0, 1</td>
+<td>root files, <code>packages/config/</code>, <code>packages/logger/</code>, skeletons of all apps</td>
+<td>Workspaces, strict tsconfig, ESLint money rule, Vitest workspace, <strong>minimal CI</strong> (lint, typecheck, test)</td>
+</tr>
+<tr>
+<td><code>@cex/db</code></td>
+<td>2</td>
+<td><code>packages/db/</code></td>
+<td>Prisma schema (verbatim §4.5), Timescale migration + candle aggregates, idempotent seed (+ G4 fee user)</td>
+</tr>
+<tr>
+<td>Auth</td>
+<td>4</td>
+<td><code>apps/api-gateway/src/{routes,services,middleware,schemas,plugins}/auth*</code></td>
+<td>Signup/signin/refresh/signout, JWT, rotation with reuse detection, rate limits, audit</td>
+</tr>
+<tr>
+<td>Engine client</td>
+<td>8 (gateway half)</td>
+<td><code>apps/api-gateway/src/services/engine-client.ts</code></td>
+<td><code>XADD</code>, reply waiter, 2 s timeout → 202, <code>XLEN</code> backpressure → 503</td>
+</tr>
+<tr>
+<td>Fake engine</td>
+<td>—</td>
+<td><code>apps/api-gateway/src/tests/fake-engine.ts</code></td>
+<td>Reads <code>engine.commands</code> and answers per contract (replays fixtures). Deleted or kept only as a test double after I1</td>
+</tr>
+<tr>
+<td>Trading API</td>
+<td>9</td>
+<td><code>apps/api-gateway/src/{routes,services,schemas}/orders*, balances*</code></td>
+<td>Order routes, <code>MarketConfigCache</code>, pagination, OpenAPI at <code>/docs</code></td>
+</tr>
+<tr>
+<td>Public read API</td>
+<td>12 (step 7)</td>
+<td><code>apps/api-gateway/src/routes/market*</code></td>
+<td><code>/depth</code>, <code>/ticker</code> (Redis keys from A), <code>/trades</code>, <code>/klines</code> (Postgres views)</td>
+</tr>
+<tr>
+<td>Wallet and admin</td>
+<td>14</td>
+<td><code>apps/api-gateway/src/routes/{wallet,admin}*</code></td>
+<td>Deposit/withdraw, admin market/halt/withdrawal/fees, audit rows</td>
+</tr>
+<tr>
+<td>Web</td>
+<td>15, 16, 17</td>
+<td><code>apps/web/</code></td>
+<td>Next.js app, <code>lib/api.ts</code>, <code>lib/ws.ts</code>, <code>lib/format.ts</code>, stores, terminal, wallet/orders/admin pages, Playwright. Design reference: <code>docs/designs/Kairos.html</code></td>
+</tr>
+<tr>
+<td>Mock WS server</td>
+<td>—</td>
+<td><code>apps/web/scripts/mock-ws.ts</code></td>
+<td>Serves fixture-driven §6.2 frames until A's ws-server lands</td>
+</tr>
+</tbody>
+</table>
+<h3 id="21-why-this-split-and-not-another">2.1 Why this split and not another</h3>
+<ul>
+<li><strong>Frontend vs. backend</strong> was rejected: the backend is about 80% of the work, and the engine's coupling problems would stay inside one person anyway.</li>
+<li><strong>Engine vs. &quot;all other services&quot;</strong> was rejected: the other services split depth/seq semantics (C5) across two people.</li>
+<li><strong>The cut along the Redis stream</strong> gives one write-side contract (commands and replies) and one read-side contract (events, plus the WS protocol, which §6.2 already specifies). Both are message schemas, so they can be fixed in a few days, tested mechanically and faked easily.</li>
+<li><strong>Workload:</strong> A carries the deepest correctness work. B carries more surface area. <strong>Fallback if A falls behind:</strong> move <code>apps/ws-server</code> to B. It is isolated behind pub/sub and §6.2, so the move costs no restructuring.</li>
+</ul>
+<hr>
+<h2 id="3-dependency-and-integration-matrix">3. Dependency and Integration Matrix</h2>
+<h3 id="31-module--module-rows-depend-on-columns">3.1 Module × module (rows depend on columns)</h3>
+<table>
+<thead>
+<tr>
+<th>↓ depends on →</th>
+<th>types</th>
+<th>money</th>
+<th>config/logger</th>
+<th>db</th>
+<th>engine</th>
+<th>db-worker</th>
+<th>market-data</th>
+<th>ws-server</th>
+<th>gateway</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>engine</strong> (A)</td>
+<td>●</td>
+<td>●</td>
+<td>●</td>
+<td>seed only</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>db-worker</strong> (A)</td>
+<td>●</td>
+<td>●</td>
+<td>●</td>
+<td><strong>B</strong></td>
+<td>events</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>market-data</strong> (A)</td>
+<td>●</td>
+<td>●</td>
+<td>●</td>
+<td><strong>B</strong> (reads)</td>
+<td>events</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>ws-server</strong> (A)</td>
+<td>●</td>
+<td></td>
+<td>●</td>
+<td></td>
+<td></td>
+<td></td>
+<td>pub/sub, keys</td>
+<td></td>
+<td><strong>B</strong> (JWT)</td>
+</tr>
+<tr>
+<td><strong>gateway</strong> (B)</td>
+<td>●</td>
+<td><strong>A</strong></td>
+<td>●</td>
+<td>●</td>
+<td><strong>A</strong> (stream)</td>
+<td><strong>A</strong> (projection lag)</td>
+<td><strong>A</strong> (keys)</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>web</strong> (B)</td>
+<td>●</td>
+<td><strong>A</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td><strong>A</strong> (WS)</td>
+<td>●</td>
+</tr>
+</tbody>
+</table>
+<p><code>●</code> = same owner or a frozen contract. A <strong>bold letter</strong> marks a dependency on the other developer.</p>
+<h3 id="32-contracts-frozen-in-the-contract-sprint-tag-contracts-v1">3.2 Contracts (frozen in the Contract Sprint, tag <code>contracts-v1</code>)</h3>
+<p>All of these live in <code>packages/types/src/</code>, one file per concern so that edits rarely touch the same file.</p>
+<pre><code class="language-ts"><span class="hljs-comment">// money.ts — wire money type</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> <span class="hljs-title class_">Money</span> = <span class="hljs-built_in">string</span>;                     <span class="hljs-comment">// scaled BigInt (1e8) as decimal string</span>
+
+<span class="hljs-comment">// enums.ts — Side, OrderType, OrderStatus, MarketStatus, RejectCode, LedgerReason, Role (uppercase strings)</span>
+
+<span class="hljs-comment">// redis.ts — the only place Redis names appear (§4.7)</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-variable constant_">STREAM</span> = { <span class="hljs-attr">COMMANDS</span>: <span class="hljs-string">&#x27;engine.commands&#x27;</span>, <span class="hljs-attr">REPLIES</span>: <span class="hljs-string">&#x27;engine.replies&#x27;</span>,
+                        <span class="hljs-attr">EVENTS</span>: <span class="hljs-string">&#x27;engine.events&#x27;</span>, <span class="hljs-attr">DEAD</span>: <span class="hljs-string">&#x27;engine.events.dead&#x27;</span> } <span class="hljs-keyword">as</span> <span class="hljs-keyword">const</span>;
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-variable constant_">GROUP</span>  = { <span class="hljs-attr">ENGINE</span>: <span class="hljs-string">&#x27;engine&#x27;</span>, <span class="hljs-attr">DBW</span>: <span class="hljs-string">&#x27;dbw&#x27;</span>, <span class="hljs-attr">MD</span>: <span class="hljs-string">&#x27;md&#x27;</span> } <span class="hljs-keyword">as</span> <span class="hljs-keyword">const</span>;
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-variable constant_">KEY</span>    = { <span class="hljs-attr">depth</span>: <span class="hljs-function">(<span class="hljs-params">m: <span class="hljs-built_in">string</span></span>) =&gt;</span> <span class="hljs-string">`depth:<span class="hljs-subst">${m}</span>`</span>, <span class="hljs-attr">ticker</span>: <span class="hljs-function">(<span class="hljs-params">m: <span class="hljs-built_in">string</span></span>) =&gt;</span> <span class="hljs-string">`ticker:<span class="hljs-subst">${m}</span>`</span>,
+                        <span class="hljs-attr">marketCfg</span>: <span class="hljs-function">(<span class="hljs-params">s: <span class="hljs-built_in">string</span></span>) =&gt;</span> <span class="hljs-string">`marketcfg:<span class="hljs-subst">${s}</span>`</span>, <span class="hljs-attr">rl</span>: <span class="hljs-function">(<span class="hljs-params">scope: <span class="hljs-built_in">string</span>, id: <span class="hljs-built_in">string</span></span>) =&gt;</span> <span class="hljs-string">`rl:<span class="hljs-subst">${scope}</span>:<span class="hljs-subst">${id}</span>`</span> };
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-variable constant_">CHAN</span>   = { <span class="hljs-attr">depth</span>: <span class="hljs-function">(<span class="hljs-params">m: <span class="hljs-built_in">string</span></span>) =&gt;</span> <span class="hljs-string">`md:depth:<span class="hljs-subst">${m}</span>`</span>, <span class="hljs-attr">trade</span>: <span class="hljs-function">(<span class="hljs-params">m: <span class="hljs-built_in">string</span></span>) =&gt;</span> <span class="hljs-string">`md:trade:<span class="hljs-subst">${m}</span>`</span>,
+                        <span class="hljs-attr">ticker</span>: <span class="hljs-function">(<span class="hljs-params">m: <span class="hljs-built_in">string</span></span>) =&gt;</span> <span class="hljs-string">`md:ticker:<span class="hljs-subst">${m}</span>`</span>, <span class="hljs-attr">kline</span>: <span class="hljs-function">(<span class="hljs-params">i: <span class="hljs-built_in">string</span>, m: <span class="hljs-built_in">string</span></span>) =&gt;</span> <span class="hljs-string">`md:kline:<span class="hljs-subst">${i}</span>:<span class="hljs-subst">${m}</span>`</span>,
+                        <span class="hljs-attr">user</span>: <span class="hljs-function">(<span class="hljs-params">u: <span class="hljs-built_in">string</span></span>) =&gt;</span> <span class="hljs-string">`user:<span class="hljs-subst">${u}</span>`</span> };
+
+<span class="hljs-comment">// commands.ts — written by B (gateway), consumed by A (engine)</span>
+<span class="hljs-keyword">interface</span> <span class="hljs-title class_">Base</span>&lt;T <span class="hljs-keyword">extends</span> <span class="hljs-built_in">string</span>, P&gt; { <span class="hljs-attr">commandId</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">type</span>: T; userId?: <span class="hljs-built_in">string</span>; <span class="hljs-attr">ts</span>: <span class="hljs-built_in">number</span>; <span class="hljs-attr">payload</span>: P }
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> <span class="hljs-title class_">Command</span> =
+  | <span class="hljs-title class_">Base</span>&lt;<span class="hljs-string">&#x27;PLACE_ORDER&#x27;</span>, { <span class="hljs-attr">orderId</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">market</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">side</span>: <span class="hljs-title class_">Side</span>; <span class="hljs-attr">type</span>: <span class="hljs-title class_">OrderType</span>;
+        price?: <span class="hljs-title class_">Money</span>; quantity?: <span class="hljs-title class_">Money</span>; quoteQuantity?: <span class="hljs-title class_">Money</span>;
+        <span class="hljs-attr">postOnly</span>: <span class="hljs-built_in">boolean</span>; <span class="hljs-attr">ioc</span>: <span class="hljs-built_in">boolean</span>; clientOrderId?: <span class="hljs-built_in">string</span> }&gt;
+  | <span class="hljs-title class_">Base</span>&lt;<span class="hljs-string">&#x27;CANCEL_ORDER&#x27;</span>,      { <span class="hljs-attr">orderId</span>: <span class="hljs-built_in">string</span> }&gt;                                   <span class="hljs-comment">// G5</span>
+  | <span class="hljs-title class_">Base</span>&lt;<span class="hljs-string">&#x27;DEPOSIT&#x27;</span>,           { <span class="hljs-attr">depositId</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">asset</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">amount</span>: <span class="hljs-title class_">Money</span> }&gt;
+  | <span class="hljs-title class_">Base</span>&lt;<span class="hljs-string">&#x27;WITHDRAW_REQUEST&#x27;</span>,  { <span class="hljs-attr">withdrawalId</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">asset</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">amount</span>: <span class="hljs-title class_">Money</span> }&gt;
+  | <span class="hljs-title class_">Base</span>&lt;<span class="hljs-string">&#x27;WITHDRAW_COMPLETE&#x27;</span>, { <span class="hljs-attr">withdrawalId</span>: <span class="hljs-built_in">string</span> }&gt;                              <span class="hljs-comment">// G3</span>
+  | <span class="hljs-title class_">Base</span>&lt;<span class="hljs-string">&#x27;WITHDRAW_REJECT&#x27;</span>,   { <span class="hljs-attr">withdrawalId</span>: <span class="hljs-built_in">string</span> }&gt;
+  | <span class="hljs-title class_">Base</span>&lt;<span class="hljs-string">&#x27;MARKET_CONFIG&#x27;</span>,     <span class="hljs-title class_">MarketConfigWire</span>&gt;
+  | <span class="hljs-title class_">Base</span>&lt;<span class="hljs-string">&#x27;HALT_MARKET&#x27;</span> | <span class="hljs-string">&#x27;RESUME_MARKET&#x27;</span>, { <span class="hljs-attr">market</span>: <span class="hljs-built_in">string</span> }&gt;;
+
+<span class="hljs-comment">// events.ts — written by A (engine), consumed by A (db-worker, market-data) and indirectly by B</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">OrderSnapshot</span> {                                                     <span class="hljs-comment">// G7</span>
+  <span class="hljs-attr">orderId</span>: <span class="hljs-built_in">string</span>; clientOrderId?: <span class="hljs-built_in">string</span>; <span class="hljs-attr">userId</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">market</span>: <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">side</span>: <span class="hljs-title class_">Side</span>; <span class="hljs-attr">type</span>: <span class="hljs-title class_">OrderType</span>; price?: <span class="hljs-title class_">Money</span>; <span class="hljs-attr">quantity</span>: <span class="hljs-title class_">Money</span>;                       <span class="hljs-comment">// G8</span>
+  quoteQuantity?: <span class="hljs-title class_">Money</span>; <span class="hljs-attr">filledQuantity</span>: <span class="hljs-title class_">Money</span>; avgPrice?: <span class="hljs-title class_">Money</span>;
+  <span class="hljs-attr">status</span>: <span class="hljs-title class_">OrderStatus</span>; <span class="hljs-attr">postOnly</span>: <span class="hljs-built_in">boolean</span>; <span class="hljs-attr">ioc</span>: <span class="hljs-built_in">boolean</span>; rejectReason?: <span class="hljs-title class_">RejectCode</span>;
+}
+<span class="hljs-keyword">interface</span> <span class="hljs-title class_">Ev</span>&lt;T <span class="hljs-keyword">extends</span> <span class="hljs-built_in">string</span>, D&gt; { <span class="hljs-attr">engineSeq</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">commandSeq</span>: <span class="hljs-built_in">string</span>;            <span class="hljs-comment">// G1</span>
+                                    <span class="hljs-attr">commandId</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">type</span>: T; <span class="hljs-attr">ts</span>: <span class="hljs-built_in">number</span>; <span class="hljs-attr">data</span>: D }
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> <span class="hljs-title class_">EngineEvent</span> =
+  | <span class="hljs-title class_">Ev</span>&lt;<span class="hljs-string">&#x27;ORDER_ACCEPTED&#x27;</span> | <span class="hljs-string">&#x27;ORDER_PLACED&#x27;</span> | <span class="hljs-string">&#x27;ORDER_UPDATED&#x27;</span> | <span class="hljs-string">&#x27;ORDER_CANCELLED&#x27;</span> | <span class="hljs-string">&#x27;ORDER_REJECTED&#x27;</span>, <span class="hljs-title class_">OrderSnapshot</span>&gt;
+  | <span class="hljs-title class_">Ev</span>&lt;<span class="hljs-string">&#x27;TRADE&#x27;</span>, { <span class="hljs-attr">market</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">price</span>: <span class="hljs-title class_">Money</span>; <span class="hljs-attr">quantity</span>: <span class="hljs-title class_">Money</span>; <span class="hljs-attr">makerOrderId</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">takerOrderId</span>: <span class="hljs-built_in">string</span>;
+                  <span class="hljs-attr">makerUserId</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">takerUserId</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">takerSide</span>: <span class="hljs-title class_">Side</span>; <span class="hljs-attr">makerFee</span>: <span class="hljs-title class_">Money</span>; <span class="hljs-attr">takerFee</span>: <span class="hljs-title class_">Money</span> }&gt;
+  | <span class="hljs-title class_">Ev</span>&lt;<span class="hljs-string">&#x27;BALANCE_UPDATED&#x27;</span>, { <span class="hljs-attr">userId</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">asset</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">available</span>: <span class="hljs-title class_">Money</span>; <span class="hljs-attr">locked</span>: <span class="hljs-title class_">Money</span>;
+                            <span class="hljs-attr">entries</span>: { <span class="hljs-attr">delta</span>: <span class="hljs-title class_">Money</span>; <span class="hljs-attr">reason</span>: <span class="hljs-title class_">LedgerReason</span>; refId?: <span class="hljs-built_in">string</span> }[] }&gt;   <span class="hljs-comment">// G2</span>
+  | <span class="hljs-title class_">Ev</span>&lt;<span class="hljs-string">&#x27;DEPTH_DELTA&#x27;</span>,   { <span class="hljs-attr">market</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">side</span>: <span class="hljs-title class_">Side</span>; <span class="hljs-attr">price</span>: <span class="hljs-title class_">Money</span>; <span class="hljs-attr">quantity</span>: <span class="hljs-title class_">Money</span> }&gt;  <span class="hljs-comment">// new level total; &quot;0&quot; = remove</span>
+  | <span class="hljs-title class_">Ev</span>&lt;<span class="hljs-string">&#x27;MARKET_STATUS&#x27;</span>, { <span class="hljs-attr">market</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">status</span>: <span class="hljs-title class_">MarketStatus</span> }&gt;;
+
+<span class="hljs-comment">// replies.ts — written by A (runner), consumed by B (EngineClient)                  // G6</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">EngineReply</span> {
+  <span class="hljs-attr">commandId</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">engineSeq</span>: <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;OK&#x27;</span> | <span class="hljs-string">&#x27;REJECTED&#x27;</span>; code?: <span class="hljs-title class_">RejectCode</span>;
+  order?: <span class="hljs-title class_">OrderSnapshot</span>;                                         <span class="hljs-comment">// PLACE/CANCEL</span>
+  balance?: { <span class="hljs-attr">asset</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">available</span>: <span class="hljs-title class_">Money</span>; <span class="hljs-attr">locked</span>: <span class="hljs-title class_">Money</span> };  <span class="hljs-comment">// DEPOSIT/WITHDRAW_*</span>
+}
+
+<span class="hljs-comment">// ws.ts — §6.2 frames. Payloads on md:* and user:* channels ARE these frames, so ws-server forwards them verbatim</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> <span class="hljs-title class_">WsServerFrame</span> = <span class="hljs-title class_">DepthSnapshotFrame</span> | <span class="hljs-title class_">DepthUpdateFrame</span> | <span class="hljs-title class_">TradeFrame</span> | <span class="hljs-title class_">TickerFrame</span>
+                          | <span class="hljs-title class_">KlineFrame</span> | <span class="hljs-title class_">OrderUpdateFrame</span> | <span class="hljs-title class_">BalanceUpdateFrame</span> | <span class="hljs-title class_">ErrorFrame</span> | <span class="hljs-title class_">PongFrame</span>;
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> <span class="hljs-title class_">WsClientFrame</span> = { <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;SUBSCRIBE&#x27;</span> | <span class="hljs-string">&#x27;UNSUBSCRIBE&#x27;</span>; <span class="hljs-attr">params</span>: <span class="hljs-built_in">string</span>[] }
+                          | { <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;AUTH&#x27;</span>; <span class="hljs-attr">token</span>: <span class="hljs-built_in">string</span> } | { <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;PING&#x27;</span> };
+
+<span class="hljs-comment">// redis-values.ts — JSON stored at depth:{m} and ticker:{m} (A writes, B&#x27;s /depth and /ticker read)</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">DepthSnapshot</span> { <span class="hljs-attr">market</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">seq</span>: <span class="hljs-built_in">number</span>; <span class="hljs-attr">bids</span>: [<span class="hljs-title class_">Money</span>, <span class="hljs-title class_">Money</span>][]; <span class="hljs-attr">asks</span>: [<span class="hljs-title class_">Money</span>, <span class="hljs-title class_">Money</span>][] }
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">TickerSnapshot</span> { <span class="hljs-attr">market</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">last</span>: <span class="hljs-title class_">Money</span>; <span class="hljs-attr">open24h</span>: <span class="hljs-title class_">Money</span>; <span class="hljs-attr">high24h</span>: <span class="hljs-title class_">Money</span>; <span class="hljs-attr">low24h</span>: <span class="hljs-title class_">Money</span>; <span class="hljs-attr">volume24h</span>: <span class="hljs-title class_">Money</span>; <span class="hljs-attr">ts</span>: <span class="hljs-built_in">number</span> }
+
+<span class="hljs-comment">// auth.ts — B issues, A (ws-server) verifies. HS256 with JWT_ACCESS_SECRET            // C6</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">AccessTokenClaims</span> { <span class="hljs-attr">sub</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">role</span>: <span class="hljs-title class_">Role</span>; <span class="hljs-attr">iat</span>: <span class="hljs-built_in">number</span>; <span class="hljs-attr">exp</span>: <span class="hljs-built_in">number</span> }
+</code></pre>
+<p>Each type also gets a <strong>zod schema</strong> in the same file. A's tests assert that every emitted event parses. B's tests assert that every command it sends parses. That makes contract drift a failing test instead of an integration surprise.</p>
+<h3 id="33-blocking-dependencies-task-x-cannot-start-until-y">3.3 Blocking dependencies (task X cannot start until Y)</h3>
+<table>
+<thead>
+<tr>
+<th>Blocked task</th>
+<th>Needs</th>
+<th>Owner of need</th>
+<th>Workaround so nobody waits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Everything</td>
+<td>Layout decision + Phase 1 scaffold</td>
+<td>B (+ A reviews)</td>
+<td>A writes pure book code (Phase 5) in a scratch branch meanwhile</td>
+</tr>
+<tr>
+<td>Everything that crosses the stream</td>
+<td><code>contracts-v1</code></td>
+<td>Both</td>
+<td>Pairing sessions; this is the only true joint blocker</td>
+</tr>
+<tr>
+<td>db-worker (A, P11)</td>
+<td>Prisma schema + migrations (P2)</td>
+<td>B</td>
+<td>P2 is B's first task, so it lands early</td>
+</tr>
+<tr>
+<td>Gateway order routes (B, P9)</td>
+<td>money <code>zScaledString</code> (P3)</td>
+<td>A</td>
+<td>P3 is A's first task. Until it lands, B uses a temporary local regex schema</td>
+</tr>
+<tr>
+<td>Gateway P9 end-to-end</td>
+<td>Real engine runner (A, P8)</td>
+<td>A</td>
+<td><strong>Fake engine</strong> replays fixtures</td>
+</tr>
+<tr>
+<td>Gateway <code>/orders/open</code>, <code>/balances</code> real data</td>
+<td>db-worker (A, P11)</td>
+<td>A</td>
+<td>Tests seed projection rows directly</td>
+</tr>
+<tr>
+<td>Gateway <code>/depth</code>, <code>/ticker</code></td>
+<td>market-data keys (A, P12)</td>
+<td>A</td>
+<td>Tests write fixture <code>DepthSnapshot</code>/<code>TickerSnapshot</code> to Redis</td>
+</tr>
+<tr>
+<td>Web live terminal (B, P16)</td>
+<td>ws-server (A, P13)</td>
+<td>A</td>
+<td><code>mock-ws.ts</code> serves fixture frames</td>
+</tr>
+<tr>
+<td>ws-server private stream (A, P13)</td>
+<td>JWT issuing (B, P4)</td>
+<td>B</td>
+<td>A signs test tokens with the contract claims and secret</td>
+</tr>
+<tr>
+<td>Phase 18 suites</td>
+<td>Everything</td>
+<td>Both</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="4-parallel-development-strategy">4. Parallel Development Strategy</h2>
+<h3 id="41-what-runs-simultaneously">4.1 What runs simultaneously</h3>
+<pre><code>            M0 (joint)         M1                    M2                  M3                   M4 (joint)
+A: scaffold-review/types │ P3 money → P5 book → P6 match → P7 balances → P8 runner │ P11 dbw → P10 recovery → P12 md → P13 ws │ P18
+B: P0/P1 scaffold/types  │ P2 db → P4 auth → P8 client+fake → P9 trading API      │ P14 wallet/admin → P12.7 reads → P15 → P16 → P17 │ P18
+                                                          ▲ I1                         ▲ I2   ▲ I3                 ▲ I4
+</code></pre>
+<p><strong>Reorder for A: Phase 11 before Phase 10.</strong> Appendix A lists both as depending only on Phase 8. Doing the db-worker first unblocks B's read routes with real data (I2) weeks earlier, while recovery stays internal to the engine.</p>
+<h3 id="42-the-fake-engine-main-tool-against-bottleneck-b1">4.2 The fake engine (main tool against bottleneck B1)</h3>
+<p><code>apps/api-gateway/src/tests/fake-engine.ts</code>, about 100 lines:</p>
+<ol>
+<li><code>XREADGROUP</code> on <code>engine.commands</code> with its own group.</li>
+<li>Looks up the <code>commandId</code>'s scenario in a fixture map, or uses a default: <code>PLACE_ORDER</code> → <code>OK</code> with status <code>OPEN</code>; a <code>price</code> ending in <code>13</code> → <code>REJECTED INVALID_TICK</code>; and so on.</li>
+<li><code>XADD</code>s an <code>EngineReply</code> that passes the zod schema.</li>
+</ol>
+<p>Once A's engine exists, A regenerates <code>packages/types/fixtures/*.jsonl</code> from the <strong>real</strong> engine. If B's tests still pass on the real fixtures, integration I1 is low-risk.</p>
+<h3 id="43-git-workflow-refines-cexmd-93-it-doesnt-replace-it">4.3 Git workflow (refines <a href="http://cex.html">cex.md</a> §9.3; it doesn't replace it)</h3>
+<ul>
+<li><code>main</code> is protected: PR required, CI green, no force-push.</li>
+<li>Branch names: <code>a/phase-05-order-book</code>, <code>b/phase-04-auth</code>, <code>contract/&lt;topic&gt;</code>, <code>chore/&lt;topic&gt;</code>.</li>
+<li>Branches are short-lived (≤ 3 days). <strong>Rebase on <code>main</code> every morning</strong> before work.</li>
+<li><strong>Squash-merge</strong>, with the PR title as the commit message: <code>phase-NN: &lt;summary&gt;</code> for the PR that completes a phase, conventional commits (<code>feat:</code>, <code>fix:</code> …) otherwise.</li>
+<li><strong>Contract PRs</strong> (<code>packages/types/**</code>, <code>packages/db/prisma/**</code>, root config) need approval from <strong>both</strong> developers, enforced by CODEOWNERS. They should only <em>add</em> fields. Removing or renaming a field means bumping the <code>contracts-vN</code> tag and fixing both sides in the same PR.</li>
+<li>Other PRs: author merges after green CI. Cross-review is optional but encouraged on engine PRs, since both of you need to understand the engine for Phase 18.</li>
+<li>Async rhythm: a daily three-line status in a shared channel (done / next / blocked-by), one 30-minute call per week, plus a call at each integration point (I1–I4).</li>
+</ul>
+<hr>
+<h2 id="5-shared-file-and-module-ownership">5. Shared File and Module Ownership</h2>
+<h3 id="51-ownership-table">5.1 Ownership table</h3>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Owner</th>
+<th>Others may change it?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>packages/money/**</code></td>
+<td>A</td>
+<td>Via PR, A approves</td>
+</tr>
+<tr>
+<td><code>apps/engine/**</code>, <code>apps/db-worker/**</code>, <code>apps/market-data/**</code>, <code>apps/ws-server/**</code></td>
+<td>A</td>
+<td>Via PR, A approves</td>
+</tr>
+<tr>
+<td><code>packages/types/fixtures/**</code></td>
+<td>A (generated from the engine)</td>
+<td>No hand edits</td>
+</tr>
+<tr>
+<td><code>packages/db/**</code> (schema, migrations, seed)</td>
+<td>B</td>
+<td><code>contract/</code> PR, both approve</td>
+</tr>
+<tr>
+<td><code>packages/config/**</code>, <code>packages/logger/**</code></td>
+<td>B</td>
+<td>Via PR, B approves</td>
+</tr>
+<tr>
+<td><code>apps/api-gateway/**</code>, <code>apps/web/**</code></td>
+<td>B</td>
+<td>Via PR, B approves</td>
+</tr>
+<tr>
+<td>Root: <code>package.json</code>, <code>tsconfig.base.json</code>, <code>.eslintrc.cjs</code>, <code>.prettierrc</code>, <code>vitest.workspace.ts</code>, <code>.github/**</code>, compose files</td>
+<td>B</td>
+<td>Via PR, B approves</td>
+</tr>
+<tr>
+<td><code>packages/types/src/**</code></td>
+<td><strong>Joint</strong></td>
+<td><code>contract/</code> PR, both approve</td>
+</tr>
+<tr>
+<td><code>docs/cex.md</code>, <code>docs/agent.md</code>, <code>docs/workstreams.md</code></td>
+<td>Joint</td>
+<td>Both approve</td>
+</tr>
+<tr>
+<td><code>package-lock.json</code></td>
+<td>Nobody hand-edits it</td>
+<td>See the lockfile rule</td>
+</tr>
+</tbody>
+</table>
+<p><code>.github/CODEOWNERS</code> (replace the placeholders with the real GitHub handles):</p>
+<pre><code>*                         &lt;dev-b-github&gt;
+/packages/money/          &lt;dev-a-github&gt;
+/apps/engine/             &lt;dev-a-github&gt;
+/apps/db-worker/          &lt;dev-a-github&gt;
+/apps/market-data/        &lt;dev-a-github&gt;
+/apps/ws-server/          &lt;dev-a-github&gt;
+/packages/types/          &lt;dev-a-github&gt; &lt;dev-b-github&gt;
+/packages/db/prisma/      &lt;dev-a-github&gt; &lt;dev-b-github&gt;
+/docs/                    &lt;dev-a-github&gt; &lt;dev-b-github&gt;
+</code></pre>
+<p>Enable &quot;Require review from Code Owners&quot; so that shared paths need both approvals.</p>
+<h3 id="52-rules-for-shared-files">5.2 Rules for shared files</h3>
+<ol>
+<li><strong>Lockfile:</strong> only change dependencies inside your own workspace (<code>npm i &lt;pkg&gt; -w @cex/engine</code>). On a lockfile conflict, never hand-merge: take <code>main</code>'s version (<code>git checkout --theirs package-lock.json</code>), run <code>npm install</code> and commit the result.</li>
+<li><strong>Config:</strong> <code>packages/config</code> defines <strong>all</strong> Appendix C variables in Phase 1, so neither side needs to touch it later. A new variable means a PR that updates <code>.env.example</code> and Appendix C together.</li>
+<li><strong>Types:</strong> each concern has its own file (§3.2). Engine work touches <code>events.ts</code>/<code>replies.ts</code> and gateway work touches <code>commands.ts</code>/<code>dto.ts</code>, so the same file rarely gets two concurrent edits.</li>
+<li><strong>Root scripts:</strong> each workspace defines its own <code>build/test/lint/typecheck</code>. The root only runs <code>--workspaces --if-present</code>, so new apps never need root edits.</li>
+<li><strong>Migrations:</strong> only B creates Prisma migrations. If A needs a column or index for db-worker, A opens an issue and B ships the migration. Two developers generating migrations in parallel produces conflicting migration histories.</li>
+</ol>
+<h3 id="53-contract-sprint-m0--exit-checklist">5.3 Contract Sprint (M0) — exit checklist</h3>
+<ul class="contains-task-list">
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Layout decision applied (§1.1); Node 20 on both machines; Phase 0 acceptance passes on <strong>both</strong> machines.</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> Phase 1 scaffold merged (B); A has reviewed it.</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> G1–G8 decided and recorded in this file (or in <a href="http://cex.html">cex.md</a>, if you prefer to amend the spec).</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> <code>packages/types</code> merged with all §3.2 types and zod schemas; tag <code>contracts-v1</code>.</li>
+<li class="task-list-item enabled"><input class="task-list-item-checkbox"type="checkbox"> CODEOWNERS, branch protection and minimal CI are on.</li>
+</ul>
+<hr>
+<h2 id="6-integration-and-testing-strategy">6. Integration and Testing Strategy</h2>
+<h3 id="61-test-responsibilities">6.1 Test responsibilities</h3>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>A owns</th>
+<th>B owns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unit / property</td>
+<td>money (coverage ≥ 95%, round-trips); book property tests; matching table tests + 100k fuzz; balances (worked example to the unit, conservation fuzz)</td>
+<td>auth service, schemas, <code>MarketConfigCache</code>, <code>format.ts</code>, <code>parseInputToScaled</code>, slider BigInt math</td>
+</tr>
+<tr>
+<td>Contract</td>
+<td>Every emitted event and reply parses with the zod schemas; fixtures regenerated by the engine</td>
+<td>Every sent command parses; fake engine only answers with schema-valid replies; web parses fixture WS frames</td>
+</tr>
+<tr>
+<td>Integration (own side, real Redis/PG)</td>
+<td>runner exactly-once; recovery <code>kill -9</code> ×50 hash compare; db-worker double replay; depth snapshot + deltas = engine book; WS isolation (user A ≠ user B)</td>
+<td>Auth flows + rate limits; order routes against the fake engine; wallet/admin + audit rows; migrations + seed idempotency</td>
+</tr>
+<tr>
+<td>Cross-stream integration (Phase 18.3)</td>
+<td>Co-owned: A owns engine/worker/WS assertions, B owns the harness + gateway/REST assertions</td>
+<td></td>
+</tr>
+<tr>
+<td>E2E (Playwright)</td>
+<td>—</td>
+<td>B, with A reviewing the trading scenarios</td>
+</tr>
+<tr>
+<td>Load (k6) / chaos</td>
+<td>A: engine, worker, ws numbers; <code>docs/perf.md</code>, <code>docs/chaos.md</code></td>
+<td>B: gateway latency scenario + k6 scripts</td>
+</tr>
+<tr>
+<td>Reconciliation (<code>scripts/reconcile.ts</code>)</td>
+<td>A</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62-integration-sequence-each-step-is-a-small-pr-plus-a-joint-call">6.2 Integration sequence (each step is a small PR plus a joint call)</h3>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Combines</th>
+<th>Proof</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>I1</strong></td>
+<td>Real engine replaces the fake engine behind the gateway</td>
+<td>Phase 9 acceptance E2E: sign in → deposit → place → see in open orders → cancel → balance unlocked</td>
+</tr>
+<tr>
+<td><strong>I2</strong></td>
+<td>db-worker on</td>
+<td><code>/orders/open</code>, <code>/orders/history</code>, <code>/trades/mine</code>, <code>/balances</code> return real projections; Phase 11 100k-order DB = engine balances</td>
+</tr>
+<tr>
+<td><strong>I3</strong></td>
+<td>market-data + gateway public reads</td>
+<td><code>/depth</code>, <code>/ticker</code>, <code>/klines</code>, <code>/trades</code> match hand-computed values (Phase 12 acceptance)</td>
+</tr>
+<tr>
+<td><strong>I4</strong></td>
+<td>ws-server ↔ web (mock-ws removed)</td>
+<td>Phase 16 acceptance: two browsers trade, everything updates in &lt; 300 ms</td>
+</tr>
+<tr>
+<td><strong>I5</strong></td>
+<td>Wallet/admin end to end</td>
+<td>Phase 17 Playwright: admin halts a market, trader sees &quot;Market halted&quot;</td>
+</tr>
+</tbody>
+</table>
+<p>Rules: one integration step at a time on <code>main</code>; never two in flight. Each step starts with both of you rebased on the same <code>main</code> commit. A failure becomes a regression test before the fix (§9.4).</p>
+<hr>
+<h2 id="7-development-roadmap">7. Development Roadmap</h2>
+<table>
+<thead>
+<tr>
+<th>Milestone</th>
+<th>Dev A</th>
+<th>Dev B</th>
+<th>Exit criteria</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>M0 Foundation</strong> (joint, blocking)</td>
+<td>Review scaffold; co-write <code>events.ts</code>, <code>replies.ts</code>, <code>ws.ts</code>; start Phase 5 in a scratch branch</td>
+<td>Restructure repo, Phase 0/1 scaffold, CI; co-write <code>commands.ts</code>, <code>dto.ts</code>, <code>redis.ts</code></td>
+<td>§5.3 checklist; <code>contracts-v1</code> tagged</td>
+</tr>
+<tr>
+<td><strong>M1 Cores</strong></td>
+<td>P3 money → P5 book → P6 matching → P7 balances</td>
+<td>P2 db + seed → P4 auth</td>
+<td>Phase 2–7 acceptance (A: worked example exact; B: auth tests green)</td>
+</tr>
+<tr>
+<td><strong>M2 First contact</strong></td>
+<td>P8 runner; publish real fixtures</td>
+<td>P8 EngineClient + fake engine → P9 trading API</td>
+<td><strong>I1</strong> passes</td>
+</tr>
+<tr>
+<td><strong>M3 Services</strong></td>
+<td>P11 db-worker → P10 recovery → P12 market-data → P13 ws-server</td>
+<td>P14 wallet/admin → P12.7 public reads → P15 web foundation → P16 terminal (on mock-ws)</td>
+<td><strong>I2, I3, I4</strong> pass</td>
+</tr>
+<tr>
+<td><strong>M4 Product complete</strong></td>
+<td>Help with E2E trading scenarios; prepare reconciliation</td>
+<td>P17 pages + admin UI</td>
+<td><strong>I5</strong> passes</td>
+</tr>
+<tr>
+<td><strong>M5 Verify</strong> (P18, joint)</td>
+<td>Fuzz/coverage gates, chaos, reconciliation, perf</td>
+<td>Integration harness, E2E, security tests, k6 gateway</td>
+<td>Phase 18 acceptance</td>
+</tr>
+<tr>
+<td><strong>M6 Ship</strong></td>
+<td>P19: engine/worker/md/ws Dockerfiles, engine metrics, journal/snapshot backups, runbook engine section</td>
+<td>P19: nginx, prod compose, migrate service, web/gateway Dockerfiles, full CI, secrets, Grafana</td>
+<td>Phase 19 acceptance</td>
+</tr>
+<tr>
+<td><strong>M7 Release</strong> (P20, joint)</td>
+<td>Demo script engine side</td>
+<td>README, CHANGELOG, tag</td>
+<td><code>v1.0.0</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="what-can-start-right-now">What can start right now</h3>
+<p><strong>Both, today:</strong></p>
+<ol>
+<li>Agree on the layout decision (§1.1) and G1–G8 (§1.5).</li>
+<li>Install Node 20 and pass Phase 0 acceptance on both machines.</li>
+<li>Remove the planning comment from <code>cex.md</code>; delete <code>debug.log</code>; decide whether to keep the re-escaped <code>Kairos.html</code>.</li>
+</ol>
+<p><strong>Dev A, immediately:</strong> Phase 5 order book (<code>DoublyLinkedList</code>, <code>SortedPriceLevels</code>). It is pure code with no dependencies, so it can live in a scratch branch until the scaffold merges. Then Phase 3 money as the first merged PR.</p>
+<p><strong>Dev B, immediately:</strong> the Phase 1 scaffold (root workspace, tsconfig, ESLint money rule, config/logger, empty app skeletons, CI), then the Phase 2 Prisma schema verbatim from §4.5.</p>
+<h3 id="note-on-the-one-phase-at-a-time-rule-cexmd-02">Note on the &quot;one phase at a time&quot; rule (<a href="http://cex.html">cex.md</a> §0.2)</h3>
+<p>That rule now applies <strong>per workstream</strong>. Each developer still finishes their phases in order and meets every acceptance criterion. Cross-stream prerequisites from Appendix A are replaced by contracts and fakes only where listed in §3.3, and each one is retired at an explicit integration step (I1–I5). If you use the AI prompt in §0.2, tell it which workstream and phase it is on and point it at this file.</p>
+
+            <script async src="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.js"></script>
+            
+        </body>
+        </html>

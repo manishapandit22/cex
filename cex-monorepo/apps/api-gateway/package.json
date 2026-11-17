@@ -1,0 +1,22 @@
+{
+  "name": "@cex/api-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@cex/config": "0.1.0",
+    "@cex/db": "0.1.0",
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^10.0.1",
+    "@fastify/helmet": "^12.0.1",
+    "@fastify/jwt": "^9.0.0",
+    "@fastify/rate-limit": "^10.1.1",
+    "argon2": "^0.41.1",
+    "fastify": "^5.2.1",
+    "ioredis": "^5.4.2",
+    "zod": "^3.23.8"
+  }
+}
