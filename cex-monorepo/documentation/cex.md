@@ -1744,3 +1744,78 @@ AUTH       : argon2id; access JWT 15m in memory; refresh 7d HTTP-only cookie, ro
 REALTIME   : WS snapshot + delta with seq; resync on gap
 ORDER OF WORK : Phase 0 -> 20, never skip
 ```
+
+Part 3: Liquidation and funding math (perpetuals)
+
+3.1 Definitions
+
+- q = position size (long positive, short negative), E = entry price, M = mark price, L = leverage.
+- Notional N = |q|·M
+- Initial margin IM = |q|·E / L
+- Maintenance margin MM = |q|·M · mmr. The maintenance margin rate is tiered, with a higher mmr for bigger positions.
+- Unrealized PnL = q·(M − E). A long profits when M rises, and a short (negative q) profits when M falls.
+- Equity (isolated) = margin + uPnL
+- Liquidation triggers when equity ≤ MM.
+
+3.2 Worked example (isolated, long)
+
+Long 1 BTC at 60,000, 10x, mmr = 0.5%.
+- IM = 6,000 USDT.
+- Liquidation when 6000 + (P − 60000) = 0.005·P
+  → 0.995·P = 54000 → P_liq ≈ 54,271.
+
+General formulas (ignoring fees):
+Long :  P_liq = E · (1 − 1/L) / (1 − mmr)         = 60000·0.9/0.995 ≈ 54,271
+Short:  P_liq = E · (1 + 1/L) / (1 + mmr)         = 60000·1.1/1.005 ≈ 65,672
+Bankruptcy price is where equity hits exactly 0: long E(1 − 1/L) = 54,000. The gap between 54,271 (liquidation) and 54,000 (bankruptcy) is the buffer, about 271 USDT, which is the maintenance margin. It pays the liquidation fee and cushions slippage.
+
+3.3 Cross margin
+
+One shared pool backs all positions:
+Equity = wallet balance + Σ uPnL(all positions)
+Liquidate when Equity ≤ Σ MM(all positions)
+- Margin ratio = ΣMM / Equity, and 100% means liquidation.
+- Liquidation price now depends on every other position, so it moves as others move. This is why unified accounts (Backpack's style) are powerful and also riskier.
+
+3.4 Why the mark price, not the last price
+
+A whale could spike the last traded price on a thin book to liquidate others. So:
+Index = weighted average of several external exchanges' prices (outliers dropped)
+Mark  ≈ Index + EMA(basis)      (clamped), where basis = perp mid − index
+        (Binance uses a median of several such estimates)
+Liquidation and uPnL use mark. Fills and realized PnL use actual trade prices.
+
+3.5 The liquidation process
+
+mark price tick ─► risk engine finds accounts with equity ≤ MM
+   │
+   ├─ 1. (often) cancel the user's open orders, free margin
+   ├─ 2. partial liquidation: reduce position in steps to drop back above MM
+   └─ 3. full takeover: liquidation engine takes the position and sends a
+         reduce-only order into the book, aiming at the bankruptcy price or better
+Outcomes by fill price (long, bankruptcy 54,000):
+- Filled at 54,100 (better than bankruptcy) → leftover ≈ 100 USDT goes to the insurance fund. The user gets nothing back.
+- Filled at 53,900 (worse) → the 100 USDT shortfall is paid from the insurance fund.
+- Insurance fund empty and a loss to cover → ADL.
+
+ADL (auto-deleveraging): the exchange force-closes opposing, profitable positions at the bankruptcy price, ranked by profit% × effective leverage. Those are the 5-light indicators in the UI. It's the last resort that keeps the system solvent without socializing losses to everyone.
+
+How the risk engine scales: it doesn't scan millions of accounts per tick. For isolated positions it keeps them in a structure sorted by liquidation price, so a mark move only inspects those whose price was crossed. Cross-margin accounts are tracked with a "dirty set": when a mark price moves, only accounts holding that symbol are recomputed.
+
+3.6 Funding rate math
+
+The perp has no expiry, so funding keeps it near spot. It is peer-to-peer (longs ↔ shorts). The exchange doesn't earn it.
+
+Premium  P = [ max(0, ImpactBid − Index) − max(0, Index − ImpactAsk) ] / Index
+Funding  F = P + clamp( Interest − P , −0.05% , +0.05% )
+Interest ≈ 0.01% per 8h (so about 0.03% per day)
+Payment  = position notional (at mark) × F      (Binance: 8h interval; some venues use 1h)
+- F > 0: longs pay shorts (perp trading above spot, so crowded longs).
+- F < 0: shorts pay longs.
+- Charged only if you hold the position at the funding timestamp.
+
+Example: 1 BTC long, mark 60,000, F = +0.01% → you pay 6 USDT. Annualized: 0.01% × 3 × 365 ≈ 11%. If F = 0.1% per 8h → ≈ 110% annualized, which signals a very crowded long trade.
+
+Why it works: when the perp is rich, longs pay, so longs reduce and shorts are paid to enter. The perp falls back toward the index. The cash-and-carry trade (long spot, short perp) captures funding while delta-neutral, which arbitrageurs run to keep the market anchored.
+
+---
