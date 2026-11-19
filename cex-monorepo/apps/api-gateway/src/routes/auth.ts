@@ -1,15 +1,17 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { AppError } from '../errors/app-error.js';
 import { signInSchema, signUpSchema } from '../schemas/auth.js';
-import { AuthService } from '../services/auth-service.js';
+import { requireAuth } from '../middleware/auth.js';
+import { AuthService, parseDurationMs } from '../services/auth-service.js';
 
 const REFRESH_COOKIE = 'refreshToken';
 const CSRF_COOKIE = 'csrfToken';
 
 function setSessionCookies(app: FastifyInstance, reply: FastifyReply, refreshToken: string, csrfToken: string): void {
   const secure = app.gatewayConfig.NODE_ENV === 'production';
-  reply.setCookie(REFRESH_COOKIE, refreshToken, { httpOnly: true, secure, sameSite: 'strict', path: '/api/v1/auth', maxAge: 7 * 24 * 60 * 60 });
-  reply.setCookie(CSRF_COOKIE, csrfToken, { httpOnly: false, secure, sameSite: 'strict', path: '/api/v1/auth', maxAge: 7 * 24 * 60 * 60 });
+  const maxAge = Math.floor(parseDurationMs(app.gatewayConfig.REFRESH_TOKEN_TTL) / 1000);
+  reply.setCookie(REFRESH_COOKIE, refreshToken, { httpOnly: true, secure, sameSite: 'strict', path: '/api/v1/auth', maxAge });
+  reply.setCookie(CSRF_COOKIE, csrfToken, { httpOnly: false, secure, sameSite: 'strict', path: '/api/v1/auth', maxAge });
 }
 
 function assertCsrf(cookie: string | undefined, header: string | undefined): void {
@@ -17,9 +19,9 @@ function assertCsrf(cookie: string | undefined, header: string | undefined): voi
 }
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
-  const service = new AuthService(app.prisma);
+  const service = new AuthService(app.prisma, parseDurationMs(app.gatewayConfig.REFRESH_TOKEN_TTL));
 
-  app.post('/signup', async (request, reply) => {
+  app.post('/signup', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (request, reply) => {
     const input = signUpSchema.parse(request.body);
     const user = await service.signUp(input);
     return reply.code(201).send({ user });
@@ -59,6 +61,15 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     assertCsrf(request.cookies[CSRF_COOKIE], request.headers['x-csrf-token'] as string | undefined);
     const refreshToken = request.cookies[REFRESH_COOKIE];
     if (refreshToken) await service.signOut(refreshToken);
+    reply.clearCookie(REFRESH_COOKIE, { path: '/api/v1/auth' });
+    reply.clearCookie(CSRF_COOKIE, { path: '/api/v1/auth' });
+    return reply.code(204).send();
+  });
+
+  app.get('/me', { preHandler: requireAuth }, async (request) => ({ user: await service.getProfile(request.user.sub) }));
+
+  app.post('/signout-all', { preHandler: requireAuth }, async (request, reply) => {
+    await service.signOutAll(request.user.sub);
     reply.clearCookie(REFRESH_COOKIE, { path: '/api/v1/auth' });
     reply.clearCookie(CSRF_COOKIE, { path: '/api/v1/auth' });
     return reply.code(204).send();
